@@ -1,0 +1,74 @@
+[
+  {
+    "nome": "Cliente",
+    "data": "22/06/2025 04:22:54",
+    "itens": [
+      {
+        "produto": "X Burguer",
+        "opcoes": [
+          "Pão: Tradicional",
+          "Carne: Unico Smash"
+        ],
+        "quantidade": 1,
+        "total": 20
+      }
+    ],
+    "total": 20,
+    "id": 1750576974125,
+    "status": "pendente"
+  },
+  {
+    "nome": "Cliente",
+    "data": "22/06/2025 04:26:49",
+    "itens": [
+      {
+        "produto": "X Salada",
+        "opcoes": [
+          "Pão: Australiano",
+          "Carne: Unico Smash"
+        ],
+        "quantidade": 1,
+        "total": 20
+      }
+    ],
+    "total": 20,
+    "id": 1750577209154,
+    "status": "pendente"
+  },
+  {
+    "nome": "Cliente",
+    "data": "22/06/2025 04:27:42",
+    "itens": [
+      {
+        "produto": "X Original",
+        "opcoes": [
+          "Pão: Australiano",
+          "Carne: Burguer 160g"
+        ],
+        "quantidade": 2,
+        "total": 68
+      }
+    ],
+    "total": 68,
+    "id": 1750577262168,
+    "status": "pendente"
+  },
+  {
+    "nome": "Cliente",
+    "data": "22/06/2025 04:28:58",
+    "itens": [
+      {
+        "produto": "X Pastrami",
+        "opcoes": [
+          "Pão: Tradicional",
+          "Carne: Burguer 160g"
+        ],
+        "quantidade": 2,
+        "total": 78
+      }
+    ],
+    "total": 78,
+    "id": 1750577338292,
+    "status": "pendente"
+  }
+]
