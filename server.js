@@ -11,11 +11,11 @@ app.use(express.json());
 
 let pedidos = [];
 
-// 🛰️ Configura WebSocket
+// 🛰️ WebSocket
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// 🔊 Função para atualizar todos os clientes WebSocket
+// 🔊 Atualiza todos os clientes WebSocket
 function broadcastAtualizacao() {
     const data = JSON.stringify({ tipo: 'atualizacao', pedidos });
     wss.clients.forEach(client => {
@@ -25,21 +25,50 @@ function broadcastAtualizacao() {
     });
 }
 
-// 🚀 Recebe um novo pedido
+// 🚀 Recebe novo pedido
 app.post('/pedidos', (req, res) => {
-    const pedido = req.body;
-    pedido.status = 'pendente';
+    const pedidoNovo = req.body;
+    pedidoNovo.status = 'pendente';
 
-    // 🔄 Verifica se já existe um pedido com o mesmo nome (ignora espaços e maiúsculas/minúsculas)
-    const indexExistente = pedidos.findIndex(p => p.nome.trim().toLowerCase() === pedido.nome.trim().toLowerCase());
+    // 🔎 Procura se já existe um pedido com o mesmo nome (ignora espaços e maiúsculas)
+    const pedidoExistente = pedidos.find(
+        p => p.nome.trim().toLowerCase() === pedidoNovo.nome.trim().toLowerCase()
+    );
 
-    if (indexExistente !== -1) {
-        // 📝 Remove o pedido antigo
-        pedidos.splice(indexExistente, 1);
+    if (pedidoExistente) {
+        // ➕ Junta os itens
+        const itensAntigos = pedidoExistente.itens.map(item => ({
+            ...item,
+            produto: `${item.produto} (Antigo)`
+        }));
+
+        const itensNovos = pedidoNovo.itens.map(item => ({
+            ...item,
+            produto: `${item.produto} (Novo)`
+        }));
+
+        const itensCombinados = [...itensAntigos, ...itensNovos];
+
+        // Soma os totais
+        const totalCombinado = itensCombinados.reduce((sum, item) => sum + item.total, 0);
+
+        const pedidoCombinado = {
+            ...pedidoNovo,
+            itens: itensCombinados,
+            total: totalCombinado,
+            status: 'pendente'
+        };
+
+        // Remove o pedido antigo
+        pedidos = pedidos.filter(p => p !== pedidoExistente);
+
+        // Adiciona no topo
+        pedidos.unshift(pedidoCombinado);
+
+    } else {
+        // Se não existir, adiciona normalmente
+        pedidos.unshift(pedidoNovo);
     }
-
-    // ⬆️ Coloca o pedido atualizado no topo
-    pedidos.unshift(pedido);
 
     broadcastAtualizacao();
     res.status(201).send('Pedido registrado com sucesso');
@@ -59,7 +88,7 @@ app.delete('/pedidos/:id', (req, res) => {
     res.sendStatus(200);
 });
 
-// 🗑️ Limpa todos os pedidos (usado ao fechar a loja)
+// 🗑️ Limpa todos os pedidos (ex.: quando loja fecha)
 app.delete('/pedidos', (req, res) => {
     pedidos = [];
     broadcastAtualizacao();
@@ -84,8 +113,6 @@ app.patch('/pedidos/:id/status', (req, res) => {
 // 🌐 WebSocket
 wss.on('connection', (ws) => {
     console.log('Cliente WebSocket conectado');
-
-    // Envia os pedidos atuais assim que conecta
     ws.send(JSON.stringify({ tipo: 'atualizacao', pedidos }));
 
     ws.on('close', () => {
