@@ -15,6 +15,7 @@ let pedidos = [];
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
+// 🔊 Função para atualizar todos os clientes WebSocket
 function broadcastAtualizacao() {
     const data = JSON.stringify({ tipo: 'atualizacao', pedidos });
     wss.clients.forEach(client => {
@@ -29,16 +30,15 @@ app.post('/pedidos', (req, res) => {
     const pedido = req.body;
     pedido.status = 'pendente';
 
-    // 🔄 Verifica se já existe um pedido com o mesmo nome
+    // 🔄 Verifica se já existe um pedido com o mesmo nome (ignora espaços e maiúsculas/minúsculas)
     const indexExistente = pedidos.findIndex(p => p.nome.trim().toLowerCase() === pedido.nome.trim().toLowerCase());
 
     if (indexExistente !== -1) {
-        // 📝 Substitui o pedido antigo
+        // 📝 Remove o pedido antigo
         pedidos.splice(indexExistente, 1);
-        pedido.nome += ' - ALTERAÇÃO';
     }
 
-    // ⬆️ Coloca o pedido no topo
+    // ⬆️ Coloca o pedido atualizado no topo
     pedidos.unshift(pedido);
 
     broadcastAtualizacao();
@@ -59,7 +59,7 @@ app.delete('/pedidos/:id', (req, res) => {
     res.sendStatus(200);
 });
 
-// 🗑️ Limpa todos os pedidos (para quando loja fecha)
+// 🗑️ Limpa todos os pedidos (usado ao fechar a loja)
 app.delete('/pedidos', (req, res) => {
     pedidos = [];
     broadcastAtualizacao();
@@ -85,6 +85,7 @@ app.patch('/pedidos/:id/status', (req, res) => {
 wss.on('connection', (ws) => {
     console.log('Cliente WebSocket conectado');
 
+    // Envia os pedidos atuais assim que conecta
     ws.send(JSON.stringify({ tipo: 'atualizacao', pedidos }));
 
     ws.on('close', () => {
