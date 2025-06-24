@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const { WebSocketServer } = require('ws');
 
 const app = express();
 const port = 3000;
@@ -9,50 +10,24 @@ app.use(express.json());
 
 let pedidos = [];
 
+// Configura WebSocket
+const wss = new WebSocketServer({ noServer: true });
+function broadcastAtualizacao() {
+    const data = JSON.stringify({ tipo: 'atualizacao', pedidos });
+    wss.clients.forEach(client => {
+        if (client.readyState === client.OPEN) {
+            client.send(data);
+        }
+    });
+}
+
 // 🚀 Recebe um novo pedido
 app.post('/pedidos', (req, res) => {
     const pedido = req.body;
     pedido.status = 'pendente';
+    pedidos.unshift(pedido);
 
-    const nomeFormatado = pedido.nome.trim().toLowerCase();
-
-    // 🔍 Verifica se já existe um pedido com esse nome (independente do status)
-    const pedidoExistente = pedidos.find(p =>
-        p.nome.trim().toLowerCase() === nomeFormatado
-    );
-
-    if (pedidoExistente) {
-        // 🔥 Volta pra pendente caso estivesse finalizado
-        pedidoExistente.status = 'pendente';
-
-        // 🧠 Junta os itens
-        pedido.itens.forEach(itemNovo => {
-            const itemExistente = pedidoExistente.itens.find(item =>
-                item.produto === itemNovo.produto &&
-                JSON.stringify(item.opcoes) === JSON.stringify(itemNovo.opcoes)
-            );
-
-            if (itemExistente) {
-                itemExistente.quantidade += itemNovo.quantidade;
-                itemExistente.total += itemNovo.total;
-            } else {
-                pedidoExistente.itens.push(itemNovo);
-            }
-        });
-
-        // 🔗 Atualiza total e data
-        pedidoExistente.total += pedido.total;
-        pedidoExistente.data = pedido.data;
-
-        // ⬆️ Move para o topo da lista
-        pedidos = pedidos.filter(p => p !== pedidoExistente);
-        pedidos.unshift(pedidoExistente);
-
-    } else {
-        // Se não existe, cria um novo pedido
-        pedidos.unshift(pedido);
-    }
-
+    broadcastAtualizacao();
     res.status(201).send('Pedido recebido com sucesso');
 });
 
@@ -65,6 +40,8 @@ app.get('/pedidos', (req, res) => {
 app.delete('/pedidos/:id', (req, res) => {
     const id = req.params.id;
     pedidos = pedidos.filter(p => p.id !== id);
+
+    broadcastAtualizacao();
     res.sendStatus(200);
 });
 
@@ -79,14 +56,17 @@ app.patch('/pedidos/:id/status', (req, res) => {
     }
 
     pedido.status = status;
+    broadcastAtualizacao();
     res.json({ message: 'Status atualizado com sucesso' });
 });
 
-// Teste de funcionamento
-app.get('/', (req, res) => {
-    res.send('🚀 API do gestor está online!');
+// Servidor HTTP + WebSocket
+const server = app.listen(port, () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
 });
 
-app.listen(port, () => {
-    console.log(`Servidor rodando em http://localhost:${port}`);
+server.on('upgrade', (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, ws => {
+        wss.emit('connection', ws, request);
+    });
 });
