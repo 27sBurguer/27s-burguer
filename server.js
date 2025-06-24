@@ -39,11 +39,18 @@ app.get('/pedidos', (req, res) => {
     res.json(pedidos);
 });
 
-// 🗑️ Exclui um pedido
+// 🗑️ Exclui um pedido específico
 app.delete('/pedidos/:id', (req, res) => {
     const id = req.params.id;
     pedidos = pedidos.filter(p => p.id !== id);
 
+    broadcastAtualizacao();
+    res.sendStatus(200);
+});
+
+// 🧹 Exclui todos os pedidos
+app.delete('/pedidos', (req, res) => {
+    pedidos = [];
     broadcastAtualizacao();
     res.sendStatus(200);
 });
@@ -66,7 +73,6 @@ app.patch('/pedidos/:id/status', (req, res) => {
 // 🌐 WebSocket Conexões
 wss.on('connection', (ws) => {
     console.log('Cliente WebSocket conectado');
-    // Envia os pedidos atuais assim que conecta
     ws.send(JSON.stringify({ tipo: 'atualizacao', pedidos }));
 
     ws.on('close', () => {
