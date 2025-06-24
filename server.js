@@ -11,7 +11,7 @@ app.use(express.json());
 
 let pedidos = [];
 
-// Configura WebSocket
+// 🛰️ Configura WebSocket
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
@@ -28,10 +28,21 @@ function broadcastAtualizacao() {
 app.post('/pedidos', (req, res) => {
     const pedido = req.body;
     pedido.status = 'pendente';
+
+    // 🔄 Verifica se já existe um pedido com o mesmo nome
+    const indexExistente = pedidos.findIndex(p => p.nome.trim().toLowerCase() === pedido.nome.trim().toLowerCase());
+
+    if (indexExistente !== -1) {
+        // 📝 Substitui o pedido antigo
+        pedidos.splice(indexExistente, 1);
+        pedido.nome += ' - ALTERAÇÃO';
+    }
+
+    // ⬆️ Coloca o pedido no topo
     pedidos.unshift(pedido);
 
     broadcastAtualizacao();
-    res.status(201).send('Pedido recebido com sucesso');
+    res.status(201).send('Pedido registrado com sucesso');
 });
 
 // 🔄 Lista todos os pedidos
@@ -48,7 +59,7 @@ app.delete('/pedidos/:id', (req, res) => {
     res.sendStatus(200);
 });
 
-// 🧹 Exclui todos os pedidos
+// 🗑️ Limpa todos os pedidos (para quando loja fecha)
 app.delete('/pedidos', (req, res) => {
     pedidos = [];
     broadcastAtualizacao();
@@ -70,9 +81,10 @@ app.patch('/pedidos/:id/status', (req, res) => {
     res.json({ message: 'Status atualizado com sucesso' });
 });
 
-// 🌐 WebSocket Conexões
+// 🌐 WebSocket
 wss.on('connection', (ws) => {
     console.log('Cliente WebSocket conectado');
+
     ws.send(JSON.stringify({ tipo: 'atualizacao', pedidos }));
 
     ws.on('close', () => {
