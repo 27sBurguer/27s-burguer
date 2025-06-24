@@ -1,9 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const { WebSocketServer } = require('ws');
+const http = require('http');
 
 const app = express();
-const port = 3000;
+const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -11,7 +12,9 @@ app.use(express.json());
 let pedidos = [];
 
 // Configura WebSocket
-const wss = new WebSocketServer({ noServer: true });
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
+
 function broadcastAtualizacao() {
     const data = JSON.stringify({ tipo: 'atualizacao', pedidos });
     wss.clients.forEach(client => {
@@ -60,13 +63,18 @@ app.patch('/pedidos/:id/status', (req, res) => {
     res.json({ message: 'Status atualizado com sucesso' });
 });
 
-// Servidor HTTP + WebSocket
-const server = app.listen(port, () => {
-    console.log(`Servidor rodando em http://localhost:${port}`);
+// 🌐 WebSocket Conexões
+wss.on('connection', (ws) => {
+    console.log('Cliente WebSocket conectado');
+    // Envia os pedidos atuais assim que conecta
+    ws.send(JSON.stringify({ tipo: 'atualizacao', pedidos }));
+
+    ws.on('close', () => {
+        console.log('Cliente WebSocket desconectado');
+    });
 });
 
-server.on('upgrade', (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, ws => {
-        wss.emit('connection', ws, request);
-    });
+// 🚀 Inicia servidor
+server.listen(port, () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
 });
